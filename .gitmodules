@@ -1,0 +1,4 @@
+[submodule "omz-js-lib"]
+	path = omz-js-lib
+	url = https://git.omegazero.org/omz-infrastructure/omz-js-lib
+	branch = master

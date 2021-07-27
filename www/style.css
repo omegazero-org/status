@@ -1,0 +1,307 @@
+/*
+ * Copyright (C) 2021 omegazero.org
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+:root{
+	--topbar-color: black;
+	--content-background-color-light: white;
+	--content-background-color-dark: #333;
+	--content-text-color-light: black;
+	--content-text-color-dark: #eee;
+	--topbar-height: 50px;
+	--loader-height: 40px;
+}
+
+
+body{
+	margin: 0px;
+	font-family: Calibri, Tahoma, Arial;
+	background-color: var(--content-background-color-dark);
+	color: var(--content-text-color-dark);
+}
+
+
+#topbar{
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: var(--topbar-height);
+	background-color: var(--topbar-color);
+	line-height: var(--topbar-height);
+	color: white;
+}
+
+#topbar, #topbar * {
+	box-sizing: border-box;
+}
+
+.logo{
+	height: var(--topbar-height);
+	padding: 3px;
+	float: left;
+}
+
+.title{
+	font-size: 30px;
+	margin-left: 7px;
+}
+
+
+#content{
+	position: absolute;
+	top: var(--topbar-height);
+	height: calc(100% - var(--topbar-height));
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+
+#main{
+	flex: 1 0 auto;
+	width: 75%;
+	margin-left: auto;
+	margin-right: auto;
+	padding: 3%;
+}
+
+#footer{
+	text-align: center;
+	padding: 20px;
+	color: #777;
+}
+
+#footer a{
+	text-decoration: none;
+	color: inherit;
+}
+
+
+.loading-wrap{
+	text-align: center;
+	position: relative;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+.loading-wheel{
+	animation: spin_anim 1.5s linear infinite;
+	border: .2em solid rgba(128, 128, 128, .2);
+	border-top-color: rgb(128, 128, 128);
+	display: block;
+	width: var(--loader-height);
+	height: var(--loader-height);
+	border-radius: var(--loader-height);
+	margin: 10px auto;
+}
+
+@keyframes spin_anim{
+	from{
+		-webkit-transform: rotate(0deg);
+		transform: rotate(0deg);
+	}
+	to{
+		-webkit-transform: rotate(360deg);
+		transform: rotate(360deg);
+	}
+}
+
+.error{
+	color: red;
+	font-weight: bold;
+}
+
+.help{
+	cursor: help;
+}
+
+
+#header{
+	margin-bottom: 50px;
+}
+
+.msgBox{
+	padding: 20px 30px;
+	border: 1px solid var(--border-color);
+	--border-color: rgba(128,128,128,.5);
+}
+
+.msgBox .hsep{
+	background-color: var(--border-color);
+}
+
+#time{
+	opacity: .5;
+}
+
+#time:after{
+	content: " - ";
+}
+
+#statusSummary{
+	font-weight: bold;
+}
+
+#statusSummary.starting{
+	color: lightblue;
+}
+
+#statusSummary.good{
+	color: lightgreen;
+}
+
+#statusSummary.bad{
+	color: orange;
+}
+
+#statusSummary.verybad{
+	color: red;
+}
+
+.hsep{
+	width: 100%;
+	height: 1px;
+	background-color: black;
+	margin: 20px 0px;
+}
+
+.statusMsg{
+	margin-top: 10px;
+}
+
+.statusMsgContent{
+}
+
+
+.category-title{
+	font-size: 30px;
+	padding: 10px;
+	margin-top: 20px;
+}
+
+.entry{
+	padding: 20px;
+	overflow: hidden;
+	text-align: left;
+	background-color: rgba(128,128,128,.1);
+	margin: 10px 0px;
+	--loader-height: 25px;
+	--default-height: 80px;
+}
+
+.entry-pending{
+	height: var(--default-height);
+}
+
+.entry .title{
+	font-size: 22px;
+	margin: 0;
+}
+
+.entry .subtitle{
+	margin-left: 15px;
+	opacity: .6;
+}
+
+.entry .currentStatus{
+	float: right;
+	text-align: right;
+}
+
+.entry .visibility{
+	color: red;
+	display: block;
+}
+
+.entry .visibility-high{
+	color: lightgreen;
+}
+
+.entry .visibility-medium{
+	color: yellow;
+}
+
+.entry .visibility-low{
+	color: orange;
+}
+
+.entry .statusDetails{
+	opacity: .5;
+}
+
+
+.uptime-value{
+	color: #8888;
+}
+
+.history{
+	margin-top: 7px;
+}
+
+.history .history-content{
+	margin-top: 5px;
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+}
+
+.history .uptime-tile{
+	display: inline-block;
+	height: 20px;
+	margin: 1px;
+	background-color: #8888;
+	flex: 1 0 auto;
+}
+
+.history .uptime-tile:hover{
+	-webkit-filter: brightness(70%);
+	filter: brightness(70%);
+}
+
+#hoverBox{
+	display: none;
+	position: fixed;
+	z-index: 1;
+	padding: 10px;
+	background-color: #222;
+}
+
+#hoverBox .box-title{
+	color: white;
+}
+
+#hoverBox .down-time{
+}
+
+
+@media (prefers-color-scheme: light){
+
+	body{
+		background-color: var(--content-background-color-light);
+		color: var(--content-text-color-light);
+	}
+}
+
+@media only screen and (max-width: 1000px){
+
+	#main{
+		width: 94%;
+	}
+
+	.entry{
+		--default-height: 85px;
+	}
+}
+
+@media only screen and (max-width: 1200px){
+
+	.history .uptime-tile{
+		margin: 0px;
+		border-radius: 1px;
+	}
+}
+
