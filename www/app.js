@@ -23,6 +23,7 @@
 	var historyData;
 
 	var visibilityThreshold;
+	var footnotes;
 	var nodeStarting;
 
 	var entryBuilders = {};
@@ -39,6 +40,7 @@
 		};
 		apiRequest("config").then((config) => {
 			visibilityThreshold = config.visibilityThreshold;
+			footnotes = config.footnotes;
 			apiRequest("status/misc").then((status) => {
 				nodeStarting = status.starting;
 				createPage(config.content, status.messages);
@@ -69,7 +71,12 @@
 		ihtml += '</div>';
 		mainEl.innerHTML = ihtml;
 		loadHeader(messages);
-		document.getElementById("footnotes").innerHTML = "All times are UTC | Status updates may take up to a few minutes to propagate through the network";
+		let footnotesStr = "All times are UTC";
+		if(Array.isArray(footnotes)){
+			for(let f of footnotes)
+				footnotesStr += " | " + f;
+		}
+		document.getElementById("footnotes").innerHTML = footnotesStr;
 	}
 
 	function jumpToAnchor(){

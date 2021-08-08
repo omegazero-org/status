@@ -64,6 +64,7 @@ let key = null;
 let nodes = [];
 let measurements = [];
 let webpageOrder = [];
+let webpageFootnotes = [];
 
 let thisNodeId = -1;
 
@@ -338,6 +339,11 @@ function reloadMConfig(json){
 			webpageOrder0.push({type: "measurement", id: i});
 	}
 	webpageOrder = webpageOrder0;
+
+	if(Array.isArray(json.webpageFootnotes))
+		webpageFootnotes = json.webpageFootnotes;
+	else
+		webpageFootnotes = [];
 }
 
 function shutdown(status){
@@ -961,7 +967,7 @@ async function http_respond_file(req, res, surl){
 const http_api = {
 
 	config(req, res, surl){
-		writeJSONResponse(res, 200, {content: webpageOrder, visibilityThreshold});
+		writeJSONResponse(res, 200, {content: webpageOrder, visibilityThreshold, footnotes: webpageFootnotes});
 	},
 
 	status_node(req, res, surl){
