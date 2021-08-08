@@ -44,7 +44,7 @@ const pargs = new omzlib.args(process.argv);
 const configFile = pargs.getValueOrDefault("configFile", "config.json");
 
 const logLevel = pargs.getNumberOrDefault("logLevel", 3);
-const logFile = pargs.getValueOrDefault("logFile", "log");
+const logFile = pargs.getValue("logFile");
 
 let statusLocalAddress = null;
 let statusPort = DEFAULT_PORT;
