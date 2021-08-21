@@ -9,6 +9,7 @@
  * is free of defects, merchantable, fit for a particular purpose or non-infringing.
  * The entire risk as to the quality and performance of the Covered Software is with You.
  */
+"use strict";
 
 const http = require("http");
 const https = require("https");
@@ -23,7 +24,7 @@ async function test(args){
 	if(args.content !== undefined && !Buffer.isBuffer(args.content))
 		args.content = Buffer.from(args.content);
 
-	turl = url.parse(args.target);
+	let turl = url.parse(args.target);
 	let mod;
 	if(turl.protocol == "http:")
 		mod = http;
@@ -84,8 +85,8 @@ function requestP(mod, options, status, content){
 }
 
 function isStatusAllowed(received, cstatus){
-	if(typeof(status) == "number"){
-		return received == status;
+	if(typeof(cstatus) == "number"){
+		return received == cstatus;
 	}else if(Array.isArray(cstatus)){
 		return cstatus.includes(received);
 	}else

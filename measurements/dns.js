@@ -9,6 +9,7 @@
  * is free of defects, merchantable, fit for a particular purpose or non-infringing.
  * The entire risk as to the quality and performance of the Covered Software is with You.
  */
+"use strict";
 
 const dns = require("dns");
 const net = require("net");
