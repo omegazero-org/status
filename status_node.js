@@ -27,7 +27,7 @@ const logger = omzlib.logger;
 const HMgr = require("./hmgr.js");
 
 
-const VERSION = "2.1.0";
+const VERSION = "2.1.1";
 const BRAND = "omz-status/" + VERSION;
 
 const visibilityThreshold = 0.5;
@@ -195,14 +195,20 @@ function loadConfig(){
 			logger.warn("key is not configured, messages will be sent unencrypted");
 
 		if(json.configReload){
+			let reloadDelay = null;
 			configFileWatcher = (json.useStatWatcher ? fs.watchFile : fs.watch)(configFile, () => {
-				logger.info("Configuration file changed, reloading measurements");
-				try{
-					reloadMConfig();
-					startMeasurements();
-				}catch(e){
-					logger.warn("Error while reloading measurements: " + e);
-				}
+				if(reloadDelay)
+					clearTimeout(reloadDelay);
+				reloadDelay = setTimeout(() => {
+					logger.info("Configuration file changed, reloading measurements");
+					try{
+						reloadMConfig();
+						startMeasurements();
+					}catch(e){
+						logger.warn("Error while reloading measurements: " + e);
+					}
+					reloadDelay = null;
+				}, 1000);
 			});
 			if(typeof(configFileWatcher.unref) == "function")
 				configFileWatcher.unref();
