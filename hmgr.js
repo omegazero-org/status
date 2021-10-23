@@ -60,37 +60,33 @@ class HMgr{
 				HMgr.logger.warn("Cannot merge time frame " + tfi + " because status is inconsistent");
 				continue;
 			}
-			let historyS = this.filter(tfstart, tfend);
-			let olen = historyS.data.length;
-			let n = this.mergeTimeFrame(historyS.data, HMgr.htimeval(tfstart), HMgr.htimeval(tfend), !!(tfstart & 1));
-			this.history.splice(historyS.start, olen, ...n);
+			this.mergeTimeFrame(HMgr.htimeval(tfstart), HMgr.htimeval(tfend), !!(tfstart & 1));
 		}
 		this.optimize();
 	}
 
-	mergeTimeFrame(historyPart, start, end, status){
-		for(let i = 1; i < historyPart.length; i += 2){
-			let prevEnd = HMgr.htimeval(historyPart[i]);
-			let nextStart = HMgr.htimeval(historyPart[i + 1]);
+	mergeTimeFrame(start, end, status){
+		for(let i = 1; i < this.history.length; i += 2){
+			let prevEnd = HMgr.htimeval(this.history[i]);
+			let nextStart = HMgr.htimeval(this.history[i + 1]);
 			if(this.isHistoryHole(prevEnd, nextStart)){
 				let tfstart = Math.max(start, prevEnd);
 				let tfend = Math.min(end, nextStart);
 				if(tfstart < tfend){
-					historyPart.splice(i + 1, 0, tfstart + status, tfend + status);
+					this.history.splice(i + 1, 0, tfstart + status, tfend + status);
 					i += 2;
 				}
 			}
 		}
-		let hs = HMgr.htimeval(historyPart[0]);
-		if(historyPart.length < 1 || start < hs){
+		let hs = HMgr.htimeval(this.history[0]);
+		if(this.history.length < 1 || start < hs){
 			hs = hs || end;
-			historyPart.unshift(start + status, Math.min(hs, end) + status);
+			this.history.unshift(start + status, Math.min(hs, end) + status);
 		}
-		let he = HMgr.htimeval(historyPart[historyPart.length - 1]);
+		let he = HMgr.htimeval(this.history[this.history.length - 1]);
 		if(end > he){
-			historyPart.push(Math.max(he, start) + status, end + status);
+			this.history.push(Math.max(he, start) + status, end + status);
 		}
-		return historyPart;
 	}
 
 	optimize(){
@@ -104,7 +100,7 @@ class HMgr{
 				if(prevEnd < nextStart && !this.isHistoryHole(prevEnd, nextStart)){
 					history[i] = nextStart + (history[i] & 1);
 				}else if(prevEnd > nextStart){
-					HMgr.logger.warn("Detected that history is out of order at index " + i);
+					HMgr.logger.warn("Detected that history is out of order at index " + i + " (" + prevEnd + " > " + nextStart + ")");
 					history[i + 1] = prevEnd + (history[i + 1] & 1);
 				}
 			}
@@ -192,7 +188,7 @@ class HMgr{
 			let hdata = [];
 			for(let i = 0; i < data.length; ){
 				if(data.length - i < 6){
-					throw new Error("Skipping trailing bytes in history data");
+					HMgr.logger.warn("Skipping trailing bytes in history data");
 					break;
 				}
 				i++;
