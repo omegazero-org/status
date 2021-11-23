@@ -25,6 +25,7 @@
 	var visibilityThreshold;
 	var footnotes;
 	var nodeStarting;
+	var maintenance;
 
 	var entryBuilders = {};
 
@@ -41,12 +42,10 @@
 		apiRequest("config").then((config) => {
 			visibilityThreshold = config.visibilityThreshold;
 			footnotes = config.footnotes;
-			apiRequest("status/misc").then((status) => {
-				nodeStarting = status.starting;
+			loadMisc().then((status) => {
 				createPage(config.content, status.messages);
 				jumpToAnchor();
 				loadEntries();
-				document.getElementById("footnotes2").innerHTML = " | Absolute Visibility: " + Math.floor(status.absoluteVisibility * 100) + "%";
 			});
 		});
 		mainEl.innerHTML = lw("Loading");
@@ -91,11 +90,20 @@
 
 
 	function reload(){
-		apiRequest("status/misc").then((status) => {
-			nodeStarting = status.starting;
+		loadMisc().then((status) => {
 			loadHeader(status.messages);
 			loadEntries();
-			document.getElementById("footnotes2").innerHTML = " | Absolute Visibility: " + Math.floor(status.absoluteVisibility * 100) + "%";
+		});
+	}
+
+	function loadMisc(){
+		return new Promise((resolve, reject) => {
+			apiRequest("status/misc").then((status) => {
+				nodeStarting = status.starting;
+				maintenance = Array.isArray(status.messages) && status.messages.includes("!maintenance");
+				document.getElementById("footnotes2").innerHTML = " | Absolute Visibility: " + Math.floor(status.absoluteVisibility * 100) + "%";
+				resolve(status);
+			}).catch(reject);
 		});
 	}
 
@@ -111,6 +119,8 @@
 			if(messages.length > 0){
 				ihtml += '<div class="hsep"></div>';
 				for(let m of messages){
+					if(typeof(m) != "object")
+						continue;
 					ihtml += '<div class="statusMsg"><span id="time">' + (m.time ? getFormattedUTCDate(m.time * 1000) : "") + '</span><span class="statusMsgContent">' + m.msg + '</span></div>';
 				}
 			}
@@ -137,6 +147,9 @@
 			if(nodeStarting){
 				statusSummary.className = "starting";
 				statusSummary.innerHTML = '<span title="The node you are connected to just started and may take some time to display correct data">Node is starting</span>';
+			}else if(maintenance){
+				statusSummary.className = "maintenance";
+				statusSummary.innerHTML = 'Ongoing Maintenance';
 			}else{
 				let p = successCount / s.length;
 				if(p >= 1){

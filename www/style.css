@@ -150,6 +150,10 @@ body{
 	color: lightblue;
 }
 
+#statusSummary.maintenance{
+	color: yellow;
+}
+
 #statusSummary.good{
 	color: lightgreen;
 }
