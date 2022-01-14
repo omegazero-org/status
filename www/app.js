@@ -236,8 +236,11 @@
 			let ihtml = '<span class="visibility ';
 			if(data.success)
 				ihtml += "visibility-high";
-			ihtml += '">' + (data.success ? "Available" : "Unavailable") + '</span><span class="statusDetails">Last reachable '
-				+ (data.lastSuccess > 0 ? getFormattedUTCDate(data.lastSuccess) : "(never)") + (data.responseTime >= 0 ? ('<br />Response time: ' + data.responseTime + 'ms') : "") + '</span>';
+			ihtml += '">' + (data.success ? "Available" : "Unavailable") + '</span>';
+			ihtml += '<span class="statusDetails">Last reachable ' + (data.lastSuccess > 0 ? getFormattedUTCDate(data.lastSuccess) : "(never)");
+			if(data.success && data.responseTime >= 0)
+				ihtml += '<br />Response time: ' + data.responseTime + 'ms';
+			ihtml += '</span>';
 			return ihtml;
 		}
 	});
