@@ -27,7 +27,7 @@ const logger = omzlib.logger;
 const HMgr = require("./hmgr.js");
 
 
-const VERSION = "2.1.1";
+const VERSION = "2.1.2";
 const BRAND = "omz-status/" + VERSION;
 
 const visibilityThreshold = 0.5;
@@ -845,6 +845,7 @@ function getMeasurementStatusLocal(id){
 	let lms = localMeasurementStatus[id];
 	if(!lms){
 		lms = {id, success: false, lastSuccess: -1, responseTime: -1, history: loadMeasurementHistory(id, measurements[id].interval)};
+		lms.lastSuccess = lms.history.lastUp;
 		localMeasurementStatus[id] = lms;
 	}
 	return lms;

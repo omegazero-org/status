@@ -157,6 +157,14 @@ class HMgr{
 		return nextStart - prevEnd > this.missingDataLen;
 	}
 
+	get lastUp(){
+		for(let i = this.history.length - 1; i >= 0; i -= 2){
+			if(this.history[i] & 1)
+				return HMgr.htimeToMillis(this.history[i]);
+		}
+		return -1;
+	}
+
 	get data(){
 		return this.history;
 	}
@@ -202,7 +210,15 @@ class HMgr{
 	}
 
 	static htime(){
-		return HMgr.htimeval(Math.floor(Date.now() / 1000) - HMgr.timeStart);
+		return HMgr.htimeFromMillis(Date.now());
+	}
+
+	static htimeFromMillis(ms){
+		return HMgr.htimeval(Math.floor(ms / 1000) - HMgr.timeStart);
+	}
+
+	static htimeToMillis(htime){
+		return (htime + HMgr.timeStart) * 1000;
 	}
 
 	static htimeval(v){
