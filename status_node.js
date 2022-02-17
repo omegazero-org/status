@@ -27,7 +27,7 @@ const logger = omzlib.logger;
 const HMgr = require("./hmgr.js");
 
 
-const VERSION = "2.1.2";
+const VERSION = "2.1.3";
 const BRAND = "omz-status/" + VERSION;
 
 const visibilityThreshold = 0.5;
@@ -567,14 +567,15 @@ async function doMeasurement(id){
 async function fixHistory(start, end, mh, id){
 	start = HMgr.htimeval(start);
 	end = HMgr.htimeval(end);
-	logger.debug("Fixing history of " + (mh ? "measurement" : "node") + " " + id + " from " + start + " to " + end);
+	const nid = (mh ? "measurement" : "node") + " " + id;
+	logger.debug("Fixing history of " + nid + " from " + start + " to " + end);
 	for(let n of nodes){
 		if(n.thisNode || (!mh && n.id == id))
 			continue;
 		try{
 			await fixHistoryWithNode(mh, id, n, start, end);
 		}catch(e){
-			logger.warn("Could not get history data from node '" + n.name + "': " + e);
+			logger.warn("Could not get history data from node '" + n.name + "' for '" + nid + "': " + e);
 		}
 	}
 }
@@ -635,7 +636,7 @@ function pollAllNodes(){
 			let ts = getNodeStatusPublic(node.id);
 			ts.lastSeen = time;
 			ts.visible = true;
-			resolveNodeAddress(node).catch(logger.warn);
+			resolveNodeAddressRefresh(node).catch(logger.warn);
 		}else{
 			ps.push(pollNode(node, timeout));
 		}
@@ -738,7 +739,7 @@ function nodeRequestBulk(node, timeout, reqs){
 			r.msgtoken = omzlib.util.randomHex16();
 		}
 
-		resolveNodeAddress(node).then(() => {
+		resolveNodeAddressRefresh(node).then(() => {
 			let socket = dgram.createSocket("udp4");
 			let timeoutWait;
 			timeoutWait = setTimeout(() => {
@@ -795,17 +796,21 @@ function nodeRequestBulk(node, timeout, reqs){
 	});
 }
 
+async function resolveNodeAddressRefresh(node){
+	if(!node.ipAddr && !node.ipAddrPromise || (node.ipAddrTTL >= 0 && Date.now() - node.ipAddrResolved > node.ipAddrTTL))
+		node.ipAddrPromise = resolveNodeAddress(node);
+	await node.ipAddrPromise;
+}
+
 async function resolveNodeAddress(node){
-	if(!node.ipAddr || (node.ipAddrTTL >= 0 && Date.now() - node.ipAddrResolved > node.ipAddrTTL)){
-		let nodeAddrs = await dns.promises.resolve4(node.address, {ttl: true});
-		if(nodeAddrs.length < 1)
-			throw "No IP address";
-		let ttl = Math.max(30, nodeAddrs[0].ttl);
-		node.ipAddr = nodeAddrs[0].address;
-		node.ipAddrTTL = ttl * 1000;
-		node.ipAddrResolved = Date.now();
-		logger.info("Resolved IP address of node '" + node.name + "': " + node.ipAddr + " (TTL " + ttl + ")");
-	}
+	let nodeAddrs = await dns.promises.resolve4(node.address, {ttl: true});
+	if(nodeAddrs.length < 1)
+		throw "No IP address";
+	let ttl = Math.max(30, nodeAddrs[0].ttl);
+	node.ipAddr = nodeAddrs[0].address;
+	node.ipAddrTTL = ttl * 1000;
+	node.ipAddrResolved = Date.now();
+	logger.debug("Resolved IP address of node '" + node.name + "': " + node.ipAddr + " (TTL " + ttl + ")");
 }
 
 

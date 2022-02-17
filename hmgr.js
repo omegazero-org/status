@@ -46,7 +46,8 @@ class HMgr{
 	filter(start, end){
 		let startI = this.historyBinarySearch(start);
 		startI -= (startI & 1);
-		let endI = this.historyBinarySearch(end);
+		// historyBinarySearch returns the next lower value if no exact match is found, so add 1 to go to next higher value
+		let endI = this.historyBinarySearch(end) + 1;
 		endI += (endI & 1);
 		return {start: startI, end: endI, data: this.history.slice(startI, endI)};
 	}
