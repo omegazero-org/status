@@ -67,17 +67,22 @@ body{
 	margin-left: auto;
 	margin-right: auto;
 	padding: 3%;
+	font-size: 15px;
 }
 
 #footer{
 	text-align: center;
 	padding: 20px;
 	color: #777;
+	font-size: 14px;
 }
 
 #footer a{
-	text-decoration: none;
 	color: inherit;
+}
+
+#footer a:hover{
+	color: #aaa;
 }
 
 
@@ -121,13 +126,13 @@ body{
 
 
 #header{
-	margin-bottom: 50px;
+	margin-bottom: 20px;
 }
 
 .msgBox{
-	padding: 20px 30px;
-	border: 1px solid var(--border-color);
 	--border-color: rgba(128,128,128,.5);
+	padding: 15px;
+	border: 1px solid var(--border-color);
 }
 
 .msgBox .hsep{
@@ -182,41 +187,44 @@ body{
 
 
 .category-title{
-	font-size: 30px;
-	padding: 10px;
+	font-size: 20px;
+	padding: 5px;
 	margin-top: 20px;
 }
 
 .entry{
-	padding: 20px;
+	font-size: 15px;
+	padding: 15px;
 	overflow: hidden;
 	text-align: left;
 	background-color: rgba(128,128,128,.1);
 	margin: 10px 0px;
 	--loader-height: 25px;
-	--default-height: 80px;
 }
 
 .entry-pending{
-	height: var(--default-height);
+	height: 63px;
 }
 
 .entry .title{
-	font-size: 22px;
+	font-size: 16px;
 	margin: 0;
 }
 
 .entry .subtitle{
+	font-size: 12px;
 	margin-left: 15px;
 	opacity: .6;
 }
 
 .entry .currentStatus{
+	font-size: 12px;
 	float: right;
 	text-align: right;
 }
 
 .entry .visibility{
+	font-size: 15px;
 	color: red;
 	display: block;
 }
@@ -255,7 +263,7 @@ body{
 
 .history .uptime-tile{
 	display: inline-block;
-	height: 20px;
+	height: 12px;
 	margin: 1px;
 	background-color: #8888;
 	flex: 1 0 auto;
@@ -294,10 +302,6 @@ body{
 
 	#main{
 		width: 94%;
-	}
-
-	.entry{
-		--default-height: 85px;
 	}
 }
 
