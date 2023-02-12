@@ -24,21 +24,6 @@ body{
 }
 
 
-#topbar{
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: var(--topbar-height);
-	background-color: var(--topbar-color);
-	line-height: var(--topbar-height);
-	color: white;
-}
-
-#topbar, #topbar * {
-	box-sizing: border-box;
-}
-
 .logo{
 	height: var(--topbar-height);
 	padding: 3px;
@@ -204,6 +189,27 @@ body{
 
 .entry-pending{
 	height: 63px;
+}
+
+.entry.compact{
+	padding: 1px 15px;
+	margin: 2px;
+}
+
+.entry.compact .currentStatus .visibility{
+	display: inline-block;
+}
+
+.entry.compact .currentStatus .statusDetails{
+	margin-left: 10px;
+}
+
+.entry.compact .loading-wheel{
+	display: none;
+}
+
+.entry-pending.compact{
+	height: 21px;
 }
 
 .entry .title{

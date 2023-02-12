@@ -60,7 +60,7 @@
 			for(let c of content){
 				if(typeof(c) == "object"){
 					let id = c.type + '-' + c.id;
-					ihtml += '<div id="entry-' + id + '" class="entry entry-pending">' + lw('Loading <span style="opacity: 0.5;">' + id + '</span>') + '</div>';
+					ihtml += '<div id="entry-' + id + '" class="entry' + (c.compact ? " compact" : "") + ' entry-pending">' + lw('Loading <span style="opacity: 0.5;">' + id + '</span>') + '</div>';
 				}else if(typeof(c) == "string"){
 					ihtml += '</div><div class="category"><div id="' + c.replace(/ /g, "_") + '" class="category-title">' + c + '</div>';
 				}

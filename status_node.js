@@ -27,7 +27,7 @@ const logger = omzlib.logger;
 const HMgr = require("./hmgr.js");
 
 
-const VERSION = "2.1.3";
+const VERSION = "2.2.1";
 const BRAND = "omz-status/" + VERSION;
 
 const visibilityThreshold = 0.5;
@@ -274,7 +274,7 @@ function reloadMConfig(json){
 	measurements = measurements0;
 
 	thisNodeId = -1;
-	let nodes0 = [];
+	nodes = [];
 	if(Array.isArray(json.nodes)){
 		let idCounter = 0;
 		const newNodeObj = (obj) => {
@@ -292,7 +292,7 @@ function reloadMConfig(json){
 				nobj.ipAddr = nobj.address;
 				nobj.ipAddrTTL = -1;
 			}
-			nodes0[id] = nobj;
+			nodes[id] = nobj;
 			if(thisNode){
 				if(thisNodeId >= 0)
 					logger.warn("Multiple nodes configured as thisNode: old " + thisNodeId + ", new " + id);
@@ -308,7 +308,6 @@ function reloadMConfig(json){
 				throw new TypeError("Values in 'nodes' must be objects or strings");
 		}
 	}
-	nodes = nodes0;
 	for(let o of localNodesStatus){
 		o.history = loadNodeHistory(o.id);
 	}
@@ -318,33 +317,37 @@ function reloadMConfig(json){
 	if(thisNodeId < 0)
 		logger.warn("No node configured as thisNode");
 
-	let webpageOrder0 = [];
+	webpageOrder = [];
 	if(Array.isArray(json.webpageOrder)){
 		for(let o of json.webpageOrder){
-			if(typeof(o) == "string")
-				webpageOrder0.push(o);
-			else if(typeof(o) == "object"){
+			if(typeof(o) == "string"){
+				webpageOrder.push(o);
+			}else if(typeof(o) == "object"){
 				let type;
 				if(o.type == "node" || o.type == "measurement")
 					type = o.type;
 				else
 					throw new Error("webpageOrder: Invalid type '" + o.type + "'");
-				if(typeof(o.id) != "number")
+				if(o.type == "node" && o.id == "*"){
+					for(let id = 0; id < nodes.length; id++){
+						webpageOrder.push({id, type, compact: !!o.compact});
+					}
+				}else if(typeof(o.id) == "number"){
+					let id = o.id;
+					if(id < 0 || (type == "node" && id >= nodes.length) || (type == "measurement" && id >= measurements.length))
+						throw new Error("webpageOrder: Invalid id");
+					webpageOrder.push({id, type, compact: !!o.compact});
+				}else
 					throw new Error("webpageOrder: 'id' must be a number");
-				let id = o.id;
-				if(id < 0 || (type == "node" && id >= nodes.length) || (type == "measurement" && id >= measurements.length))
-					throw new Error("webpageOrder: Invalid id");
-				webpageOrder0.push({id, type});
 			}else
 				throw new Error("Values in 'webpageOrder' must be strings or objects");
 		}
 	}else{
 		for(let i = 0; i < nodes.length; i++)
-			webpageOrder0.push({type: "node", id: i});
+			webpageOrder.push({type: "node", id: i});
 		for(let i = 0; i < measurements.length; i++)
-			webpageOrder0.push({type: "measurement", id: i});
+			webpageOrder.push({type: "measurement", id: i});
 	}
-	webpageOrder = webpageOrder0;
 
 	if(Array.isArray(json.webpageFootnotes))
 		webpageFootnotes = json.webpageFootnotes;
@@ -517,6 +520,8 @@ async function loadStatusMessages(){
 	if(time - lastStatusMsgPoll < 5000) // reduce filesystem io
 		return;
 	lastStatusMsgPoll = time;
+	if(!(await fs.promises.exists(statusMessageFile)))
+		return;
 	let stat = await fs.promises.lstat(statusMessageFile);
 	if(statusMessagesUpdated >= stat.mtimeMs)
 		return;
@@ -702,7 +707,7 @@ async function pollNode(node, timeout){
 			setNodeVisibleBy(thisNodeId, node.id, false);
 		for(let i = 0; i < nodes.length; i++) // node's visibility is unknown, so just assume that it sees nothing
 			setNodeVisibleBy(node.id, i, false);
-		logger.warn("Error while processing node data from '" + node.name + "': " + e);
+		logger.warn("Error while getting node data from '" + node.name + "': " + e);
 	}
 }
 
@@ -977,11 +982,9 @@ async function http_respond_file(req, res, surl){
 
 
 const http_api = {
-
 	config(req, res, surl){
 		writeJSONResponse(res, 200, {content: webpageOrder, visibilityThreshold, footnotes: webpageFootnotes});
 	},
-
 	status_node(req, res, surl){
 		let id = parseInt(surl.query.id);
 		if(Number.isNaN(id) || id < 0 || id >= nodes.length){
@@ -997,10 +1000,9 @@ const http_api = {
 		let lns = getNodeStatusLocal(id);
 		let n = nodes[id];
 		writeJSONResponse(res, 200, {name: n.name, address: n.hideAddress ? null : (n.ipAddr || n.address), nonCritical: n.nonCritical,
-			lastSeen: lns.lastSeen, lastSeenByName: lns.lastSeenBy >= 0 ? nodes[lns.lastSeenBy].name : null, visibilityFraction: lns.visibilityFraction,
-			history: historyConvertToUTime(lns.history.filter(historyStart, historyEnd).data), success: lns.visibilityFraction >= visibilityThreshold});
+				lastSeen: lns.lastSeen, lastSeenByName: lns.lastSeenBy >= 0 ? nodes[lns.lastSeenBy].name : null, visibilityFraction: lns.visibilityFraction,
+				history: n.saveHistory ? historyConvertToUTime(lns.history.filter(historyStart, historyEnd).data) : [], success: lns.visibilityFraction >= visibilityThreshold});
 	},
-
 	status_measurement(req, res, surl){
 		let id = parseInt(surl.query.id);
 		if(Number.isNaN(id) || id < 0 || id >= measurements.length){
@@ -1016,9 +1018,9 @@ const http_api = {
 		let lms = getMeasurementStatusLocal(id);
 		let m = measurements[id];
 		writeJSONResponse(res, 200, {name: m.name, type: m.type, target: m.hideTarget ? null : m.args.target, nonCritical: m.nonCritical,
-			success: lms.success, lastSuccess: lms.lastSuccess, responseTime: lms.responseTime, history: historyConvertToUTime(lms.history.filter(historyStart, historyEnd).data)});
+				success: lms.success, lastSuccess: lms.lastSuccess, responseTime: lms.responseTime,
+				history: m.saveHistory ? historyConvertToUTime(lms.history.filter(historyStart, historyEnd).data) : []});
 	},
-
 	status_misc(req, res, surl){
 		loadStatusMessages().then(() => {
 			writeJSONResponse(res, 200, {messages: statusMessages, starting: Date.now() - initTime < pollInterval * 2000, absoluteVisibility: ownVisibility});
@@ -1027,7 +1029,6 @@ const http_api = {
 			writeJSONResponse(res, 500, {err: "InternalServerError"});
 		});
 	},
-
 	nodes(req, res, surl){
 		writeJSONResponse(res, 200, publicNodesStatus);
 	}
@@ -1105,7 +1106,6 @@ function writeResponse(res, status, data, eheaders){
 }
 
 
-
 function getSrcRoot(){
 	let srcRootParts = process.argv[1].split(path.sep);
 	srcRootParts.pop();
@@ -1114,5 +1114,3 @@ function getSrcRoot(){
 		srcRoot += "/";
 	return srcRoot;
 }
-
-
