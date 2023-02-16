@@ -28,9 +28,17 @@ async function test(args){
 		let resolver = new dns.Resolver({timeout: args.timeout || 3000});
 		let target = args.targetIpAddr || args.target;
 		if(net.isIP(target) == 0){
-			let res = await dns.promises.resolve4(target);
+			let res;
+			try{
+				res = await dns.promises.resolve4(target);
+			}catch(e){
+				if(e.toString().includes("ENODATA"))
+					res = await dns.promises.resolve6(target);
+				else
+					throw e;
+			}
 			if(res.length < 1)
-				throw new Error("Unable to resolve '" + target + "'");
+				throw new Error("Query for '" + target + "' returned no data");
 			target = res[0];
 		}
 		if(net.isIPv6(target))
