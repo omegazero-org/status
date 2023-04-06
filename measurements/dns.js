@@ -56,6 +56,7 @@ async function test(args){
 		return (Date.now() - start) || 1;
 	}catch(e){
 		logger.warn("DNS request failed: " + e);
+		delete args._resolver;
 		return 0;
 	}
 }
