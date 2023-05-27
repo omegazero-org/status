@@ -55,7 +55,7 @@ async function test(args){
 		await dnsResolve(args._resolver, args.hostname, rrtype, args.expected);
 		return (Date.now() - start) || 1;
 	}catch(e){
-		logger.warn("DNS request failed: " + e);
+		logger.warn("DNS request to '" + args.target + "' failed: " + e);
 		delete args._resolver;
 		return 0;
 	}

@@ -45,7 +45,7 @@ async function test(args){
 		await requestP(mod, options, args.status, args.content);
 		return (Date.now() - start) || 1;
 	}catch(e){
-		logger.warn("HTTP request failed: " + e);
+		logger.warn("HTTP request '" + args.target + "' failed: " + e);
 		return 0;
 	}
 }
