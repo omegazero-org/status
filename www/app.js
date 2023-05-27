@@ -257,6 +257,8 @@
 			const prop = status ? "timeUp" : "timeDown";
 			const start = htimeval(history[i]) - historyStart;
 			const end = htimeval(history[i + 1]) - historyStart;
+			if(end < 0)
+				continue;
 			const startDayTime = Math.max(start % DAY_LEN, 0);
 			const endDayTime = end % DAY_LEN;
 			const startDay = Math.max(Math.floor(start / DAY_LEN), 0);
