@@ -107,7 +107,7 @@ function run(){
 		return;
 	}
 
-	serverSocket = dgram.createSocket("udp4");
+	serverSocket = dgram.createSocket("udp" + config.ipVersion);
 	serverSocket.bind({address: config.statusLocalAddress, port: config.statusPort}, () => {
 		let addr = serverSocket.address();
 		logger.info("Listening on " + addr.address + ":" + addr.port);
@@ -141,6 +141,7 @@ function loadConfig(){
 	if(configFile != "null"){
 		logger.info("Loading configuration file '" + configFile + "'");
 		let json = getConfig();
+		config.ipVersion = json.ipVersion == 4 || json.ipVersion == 6 ? json.ipVersion : 4;
 		config.statusLocalAddress = typeof(json.statusLocalAddress) == "string" ? json.statusLocalAddress : null;
 		config.statusPort = typeof(json.statusPort) == "number" ? json.statusPort : DEFAULT_PORT;
 		config.pollInterval = typeof(json.pollInterval) == "number" ? Math.max(json.pollInterval, 0) : 60;
@@ -717,7 +718,7 @@ function nodeRequestBulk(node, timeout, reqs){
 		}
 
 		resolveNodeAddressRefresh(node).then(() => {
-			let socket = dgram.createSocket("udp4");
+			let socket = dgram.createSocket("udp" + config.ipVersion);
 			let timeoutWait;
 			timeoutWait = setTimeout(() => {
 				socket.close();
@@ -759,7 +760,7 @@ function nodeRequestBulk(node, timeout, reqs){
 				logger.warn("Socket error to '" + node.name + "': " + e);
 			});
 
-			socket.bind({address: statusLocalAddress}, () => {
+			socket.bind({address: config.statusLocalAddress}, () => {
 				socket.connect(node.port, node.ipAddr, () => {
 					let pdata = JSON.stringify(reqs);
 					if(config.key)
@@ -780,7 +781,7 @@ async function resolveNodeAddressRefresh(node){
 }
 
 async function resolveNodeAddress(node){
-	let nodeAddrs = await dns.promises.resolve4(node.address, {ttl: true});
+	let nodeAddrs = await dns.promises["resolve" + config.ipVersion](node.address, {ttl: true});
 	if(nodeAddrs.length < 1)
 		throw "No IP address";
 	let ttl = Math.max(30, nodeAddrs[0].ttl);
