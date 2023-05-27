@@ -27,7 +27,7 @@ const logger = omzlib.logger;
 const HMgr = require("./hmgr.js");
 
 
-const VERSION = "2.2.1";
+const VERSION = "2.3.1";
 const BRAND = "omz-status/" + VERSION;
 
 const visibilityThreshold = 0.5;
@@ -41,26 +41,11 @@ const srcRoot = getSrcRoot();
 
 const pargs = new omzlib.args(process.argv);
 
-const configFile = pargs.getValueOrDefault("configFile", "config.json");
-
 const logLevel = pargs.getNumberOrDefault("logLevel", 3);
 const logFile = pargs.getValue("logFile");
 
-let statusLocalAddress = null;
-let statusPort = DEFAULT_PORT;
-let pollInterval = 60;
-let requestRateLimit = pollInterval / 2;
-let dataDir = "data";
-let historySubDir = "history";
-let measurementHistorySubDir = "measurements";
-let allowedStatusClients = ["127.0.0.1", "::1"];
-let webserverAddress = "127.0.0.1";
-let webserverPort = 8080;
-let siteVars = {};
-let statusMessageFile = "status.json";
-let useCustomStylesheet = false;
-let entryBuilders = [];
-let key = null;
+const configFile = pargs.getValueOrDefault("configFile", "config.json");
+let config = {};
 let nodes = [];
 let measurements = [];
 let webpageOrder = [];
@@ -112,6 +97,8 @@ function run(){
 		return Math.floor(this / Math.pow(2, bits));
 	};
 
+	logger.info(BRAND);
+
 	try{
 		loadConfig();
 	}catch(e){
@@ -121,25 +108,25 @@ function run(){
 	}
 
 	serverSocket = dgram.createSocket("udp4");
-	serverSocket.bind({address: statusLocalAddress, port: statusPort}, () => {
+	serverSocket.bind({address: config.statusLocalAddress, port: config.statusPort}, () => {
 		let addr = serverSocket.address();
 		logger.info("Listening on " + addr.address + ":" + addr.port);
 	});
 	serverSocket.on("message", onServerMessage);
 
-	if(pollInterval)
-		pollIntervalI = setInterval(pollAllNodes, pollInterval * 1000);
+	if(config.pollInterval)
+		pollIntervalI = setInterval(pollAllNodes, config.pollInterval * 1000);
 
 	startMeasurements();
 
 	setInterval(fixAllHistoryData, 600000).unref();
 
-	if(webserverPort > 0){
+	if(config.webserverPort > 0){
 		webserver = http.createServer(http_client);
 		webserver.on("error", (e) => {
 			logger.fatal("Webserver error: " + e);
 		});
-		webserver.listen({host: webserverAddress, port: webserverPort}, () => {
+		webserver.listen({host: config.webserverAddress, port: config.webserverPort}, () => {
 			let addr = webserver.address();
 			logger.info("Webserver listening on " + addr.address + ":" + addr.port);
 		});
@@ -154,43 +141,27 @@ function loadConfig(){
 	if(configFile != "null"){
 		logger.info("Loading configuration file '" + configFile + "'");
 		let json = getConfig();
-		if(typeof(json.statusLocalAddress) == "string")
-			statusLocalAddress = json.statusLocalAddress;
-		if(typeof(json.statusPort) == "number")
-			statusPort = json.statusPort;
-		if(typeof(json.pollInterval) == "number")
-			pollInterval = Math.max(json.pollInterval, 0);
-		if(typeof(json.requestRateLimit) == "number")
-			requestRateLimit = Math.max(json.requestRateLimit, 0);
-		else
-			requestRateLimit = pollInterval / 2;
-		if(typeof(json.dataDir) == "string")
-			dataDir = json.dataDir;
-		if(typeof(json.historySubDir) == "string")
-			historySubDir = json.historySubDir;
-		if(typeof(json.measurementHistorySubDir) == "string")
-			measurementHistorySubDir = json.measurementHistorySubDir;
+		config.statusLocalAddress = typeof(json.statusLocalAddress) == "string" ? json.statusLocalAddress : null;
+		config.statusPort = typeof(json.statusPort) == "number" ? json.statusPort : DEFAULT_PORT;
+		config.pollInterval = typeof(json.pollInterval) == "number" ? Math.max(json.pollInterval, 0) : 60;
+		config.requestRateLimit = typeof(json.requestRateLimit) == "number" ? Math.max(json.requestRateLimit, 0) : config.pollInterval / 2;
+		config.dataDir = typeof(json.dataDir) == "string" ? json.dataDir : "data";
+		config.historySubDir = typeof(json.historySubDir) == "string" ? json.historySubDir : "history";
+		config.measurementHistorySubDir = typeof(json.measurementHistorySubDir) == "string" ? json.measurementHistorySubDir : "measurements";
 		reloadMConfig(json);
-		if(Array.isArray(json.allowedStatusClients))
-			allowedStatusClients = json.allowedStatusClients;
-		if(typeof(json.webserverAddress) == "string")
-			webserverAddress = json.webserverAddress;
-		if(typeof(json.webserverPort) == "number")
-			webserverPort = json.webserverPort;
-		if(typeof(json.siteVars) == "object")
-			siteVars = json.siteVars;
-		if(typeof(json.statusMessageFile) == "string")
-			statusMessageFile = json.statusMessageFile;
-		if(typeof(json.useCustomStylesheet) == "boolean")
-			useCustomStylesheet = json.useCustomStylesheet;
-		if(Array.isArray(json.entryBuilders))
-			entryBuilders = json.entryBuilders;
+		config.allowedStatusClients = Array.isArray(json.allowedStatusClients) ? json.allowedStatusClients : ["127.0.0.1", "::1"];
+		config.webserverAddress = typeof(json.webserverAddress) == "string" ? json.webserverAddress : "127.0.0.1";
+		config.webserverPort = typeof(json.webserverPort) == "number" ? json.webserverPort : 8080;
+		config.siteVars = typeof(json.siteVars) == "object" ? json.siteVars : {};
+		config.statusMessageFile = typeof(json.statusMessageFile) == "string" ? json.statusMessageFile : "status.json";
+		config.useCustomStylesheet = typeof(json.useCustomStylesheet) == "boolean" ? json.useCustomStylesheet : false;
+		config.entryBuilders = Array.isArray(json.entryBuilders) ? json.entryBuilders : [];
 
 		if(typeof(json.key) == "string"){
 			let kb = Buffer.from(json.key, "hex");
 			if(kb.length != 32)
 				throw new Error("key must be 32 bytes");
-			key = kb;
+			config.key = kb;
 		}else
 			logger.warn("key is not configured, messages will be sent unencrypted");
 
@@ -214,19 +185,19 @@ function loadConfig(){
 				configFileWatcher.unref();
 		}
 
-		dataDir = path.resolve(dataDir) + "/";
-		if(!fs.existsSync(dataDir))
-			fs.mkdirSync(dataDir);
-		historySubDir = path.resolve(dataDir + historySubDir) + "/";
-		if(!fs.existsSync(historySubDir))
-			fs.mkdirSync(historySubDir);
-		measurementHistorySubDir = path.resolve(dataDir + measurementHistorySubDir) + "/";
-		if(!fs.existsSync(measurementHistorySubDir))
-			fs.mkdirSync(measurementHistorySubDir);
+		config.dataDir = path.resolve(config.dataDir) + "/";
+		if(!fs.existsSync(config.dataDir))
+			fs.mkdirSync(config.dataDir);
+		config.historySubDir = path.resolve(config.dataDir + config.historySubDir) + "/";
+		if(!fs.existsSync(config.historySubDir))
+			fs.mkdirSync(config.historySubDir);
+		config.measurementHistorySubDir = path.resolve(config.dataDir + config.measurementHistorySubDir) + "/";
+		if(!fs.existsSync(config.measurementHistorySubDir))
+			fs.mkdirSync(config.measurementHistorySubDir);
 
-		if(pollInterval < 5)
-			logger.warn("pollInterval is too low (" + pollInterval + "), recommended minimum is 5");
-		if(requestRateLimit == 0)
+		if(config.pollInterval < 5)
+			logger.warn("pollInterval is too low (" + config.pollInterval + "), recommended minimum is 5");
+		if(config.requestRateLimit == 0)
 			// not relevant if encryption is used, but useful as a second line of defense if the key gets compromised
 			logger.warn("requestRateLimit is 0, which is not recommended, because it allows the server to be used for UDP amplification attacks");
 	}
@@ -287,7 +258,8 @@ function reloadMConfig(json){
 			if(obj.name && typeof(obj.name) != "string")
 				throw new TypeError("'name' must be a string or empty");
 			let id = idCounter++;
-			let nobj = {id, address: obj.address, port: obj.port || DEFAULT_PORT, name: obj.name || obj.address, hideAddress: !!obj.hideAddress, thisNode, saveHistory, nonCritical: !!obj.nonCritical};
+			let nobj = {id, address: obj.address, port: obj.port || DEFAULT_PORT, name: obj.name || obj.address, hideAddress: !!obj.hideAddress, thisNode, saveHistory,
+					nonCritical: !!obj.nonCritical};
 			if(net.isIP(nobj.address) != 0){
 				nobj.ipAddr = nobj.address;
 				nobj.ipAddrTTL = -1;
@@ -403,8 +375,8 @@ function stopMeasurements(){
 function onServerMessage(message, rinfo){
 	let ca = rinfo.address;
 	try{
-		if(key)
-			message = decrypt(message, key);
+		if(config.key)
+			message = decrypt(message, config.key);
 
 		let json;
 		try{
@@ -415,7 +387,7 @@ function onServerMessage(message, rinfo){
 		}
 
 		const time = Date.now();
-		const rateLimitMs = requestRateLimit * 1000;
+		const rateLimitMs = config.requestRateLimit * 1000;
 		for(let c in requestClients){
 			if(time - requestClients[c] > rateLimitMs)
 				delete requestClients[c];
@@ -433,8 +405,8 @@ function onServerMessage(message, rinfo){
 				}
 				Promise.all(res).then((msgs) => {
 					let d = JSON.stringify(msgs);
-					if(key)
-						d = encrypt(d, key);
+					if(config.key)
+						d = encrypt(d, config.key);
 					logger.debug("Sending response to " + rinfo.address + ":" + rinfo.port + ": " + d.length + " bytes");
 					serverSocket.send(d, rinfo.port, rinfo.address);
 				}).catch((e) => {
@@ -460,14 +432,14 @@ async function handleRequest(time, ca, json){
 		logger.debug(ca + " requested fetchNodes");
 		return {status: "success", nodes: publicNodesStatus};
 	}else if(json.action == "fetchLocalNodes"){
-		if(allowedStatusClients.includes(ca)){
+		if(config.allowedStatusClients.includes(ca)){
 			logger.info(ca + " requested fetchLocalNodes");
 			return {status: "success", nodes: localNodesStatus};
 		}else{
 			return {status: "forbidden"};
 		}
 	}else if(json.action == "fetchLocalMeasurements"){
-		if(allowedStatusClients.includes(ca)){
+		if(config.allowedStatusClients.includes(ca)){
 			logger.info(ca + " requested fetchLocalMeasurements");
 			return {status: "success", nodes: localMeasurementStatus};
 		}else{
@@ -520,12 +492,12 @@ async function loadStatusMessages(){
 	if(time - lastStatusMsgPoll < 5000) // reduce filesystem io
 		return;
 	lastStatusMsgPoll = time;
-	if(!(await fs.promises.exists(statusMessageFile)))
+	if(!(await fs.promises.exists(config.statusMessageFile)))
 		return;
-	let stat = await fs.promises.lstat(statusMessageFile);
+	let stat = await fs.promises.lstat(config.statusMessageFile);
 	if(statusMessagesUpdated >= stat.mtimeMs)
 		return;
-	let data = await fs.promises.readFile(statusMessageFile);
+	let data = await fs.promises.readFile(config.statusMessageFile);
 	let j = JSON.parse(data);
 	if(!Array.isArray(j))
 		throw new TypeError("status messages must be an array");
@@ -632,7 +604,7 @@ function setNodeVisibleBy(watcherNodeId, targetNodeId, visible, visibleTime){
 
 function pollAllNodes(){
 	const time = Date.now();
-	const timeout = pollInterval * 500;
+	const timeout = config.pollInterval * 500;
 	let ps = [];
 	for(let node of nodes){
 		if(node.thisNode){
@@ -757,8 +729,8 @@ function nodeRequestBulk(node, timeout, reqs){
 				let msgname = "for node '" + node.name + "'/" + node.ipAddr + " (" + node.id + ") from " + rinfo.address + ":" + rinfo.port;
 				logger.debug("Received message: " + msgname);
 
-				if(key)
-					message = decrypt(message, key);
+				if(config.key)
+					message = decrypt(message, config.key);
 
 				let json;
 				try{
@@ -790,8 +762,8 @@ function nodeRequestBulk(node, timeout, reqs){
 			socket.bind({address: statusLocalAddress}, () => {
 				socket.connect(node.port, node.ipAddr, () => {
 					let pdata = JSON.stringify(reqs);
-					if(key)
-						socket.send(encrypt(pdata, key));
+					if(config.key)
+						socket.send(encrypt(pdata, config.key));
 					else
 						socket.send(pdata);
 				});
@@ -862,19 +834,19 @@ function getMeasurementStatusLocal(id){
 }
 
 function loadNodeHistory(id){
-	return HMgr.load(historySubDir + id, pollInterval * 2);
+	return HMgr.load(config.historySubDir + id, config.pollInterval * 2);
 }
 
 function saveNodeHistory(id, history){
-	history.save(historySubDir + id);
+	history.save(config.historySubDir + id);
 }
 
 function loadMeasurementHistory(id, interval){
-	return HMgr.load(measurementHistorySubDir + id, Math.floor(interval / 500));
+	return HMgr.load(config.measurementHistorySubDir + id, Math.floor(interval / 500));
 }
 
 function saveMeasurementHistory(id, history){
-	history.save(measurementHistorySubDir + id);
+	history.save(config.measurementHistorySubDir + id);
 }
 
 
@@ -957,22 +929,22 @@ async function http_respond_file(req, res, surl){
 		let data = await fs.promises.readFile(file);
 		if(surl.pathname == "/"){
 			let headAdd = "";
-			if(useCustomStylesheet)
+			if(config.useCustomStylesheet)
 				headAdd += '<link rel="stylesheet" href="custom.css" />';
-			for(let b of entryBuilders){
+			for(let b of config.entryBuilders){
 				if(typeof(b) == "string")
 					headAdd += '<script src="builders/' + b + '.js"></script>';
 			}
 			let vars = {
-				title: siteVars.title || "Server Status",
-				icon: siteVars.icon || "/icon.png",
-				description: siteVars.description || "",
+				title: config.siteVars.title || "Server Status",
+				icon: config.siteVars.icon || "/icon.png",
+				description: config.siteVars.description || "",
 				headAdd,
 				version: VERSION,
 				nodeName: thisNodeId >= 0 ? nodes[thisNodeId].name : "(none)"
 			};
-			vars.siteTitle = siteVars.siteTitle || vars.title;
-			vars.siteIcon = siteVars.siteIcon || vars.icon;
+			vars.siteTitle = config.siteVars.siteTitle || vars.title;
+			vars.siteIcon = config.siteVars.siteIcon || vars.icon;
 			data = placeVariables(data, vars);
 		}
 		writeResponse(res, 200, data, {"content-type": getContentType(file)});
@@ -1023,7 +995,7 @@ const http_api = {
 	},
 	status_misc(req, res, surl){
 		loadStatusMessages().then(() => {
-			writeJSONResponse(res, 200, {messages: statusMessages, starting: Date.now() - initTime < pollInterval * 2000, absoluteVisibility: ownVisibility});
+			writeJSONResponse(res, 200, {messages: statusMessages, starting: Date.now() - initTime < config.pollInterval * 2000, absoluteVisibility: ownVisibility});
 		}).catch((e) => {
 			logger.error("Error while updating status messages: " + e);
 			writeJSONResponse(res, 500, {err: "InternalServerError"});
