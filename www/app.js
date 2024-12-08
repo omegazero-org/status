@@ -155,7 +155,7 @@
 				if(p >= 1){
 					statusSummary.className = "good";
 					statusSummary.innerHTML = "All Systems Operational";
-				}else if(p > .5){
+				}else if(p > .7){
 					statusSummary.className = "bad";
 					statusSummary.innerHTML = "Partial Outage";
 				}else{
