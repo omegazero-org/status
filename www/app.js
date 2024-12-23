@@ -142,7 +142,8 @@
 			w.push(loadEntryContent(p[1], p[2], e));
 		}
 		Promise.all(w).then((s) => {
-			let successCount = s.filter(Boolean).length;
+			let totalCount = s.filter((v) => v >= 0).length;
+			let successCount = s.filter((v) => v === 1).length;
 			let statusSummary = document.getElementById("statusSummary");
 			if(nodeStarting){
 				statusSummary.className = "starting";
@@ -151,7 +152,7 @@
 				statusSummary.className = "maintenance";
 				statusSummary.innerHTML = 'Ongoing Maintenance';
 			}else{
-				let p = successCount / s.length;
+				let p = successCount / totalCount;
 				if(p >= 1){
 					statusSummary.className = "good";
 					statusSummary.innerHTML = "All Systems Operational";
@@ -172,7 +173,7 @@
 				element.innerHTML = err("Error while loading data for '" + type + "-" + id + "': " + msg);
 			};
 			apiRequest("status/" + type + "?id=" + id + "&historyStart=" + historyStart).then((data) => {
-				resolve(!!data.success || data.nonCritical);
+				resolve((data.nonCritical || data.disabled) ? -1 : +!!data.success);
 				if(data.err){
 					se("Received error from server: " + data.err);
 				}else{
@@ -200,7 +201,7 @@
 	}
 
 	function genEntryContentNode(data){
-		let ihtml = '<span title="critical: ' + !data.nonCritical + '" class="title">' + data.name + '</span>';
+		let ihtml = '<span class="title">' + data.name + '</span>';
 		if(data.address && data.address != data.name)
 			ihtml += '<span title="The address of this node" class="help subtitle">' + data.address + '</span>';
 		ihtml += '<div class="currentStatus"><span title="The percentage of nodes that claim to see this node of all nodes seen by the node you are connected to" class="help visibility ';

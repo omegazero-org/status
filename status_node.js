@@ -27,7 +27,7 @@ const logger = omzlib.logger;
 const HMgr = require("./hmgr.js");
 
 
-const VERSION = "2.3.1";
+const VERSION = "2.4.1";
 const BRAND = "omz-status/" + VERSION;
 
 const visibilityThreshold = 0.5;
@@ -213,31 +213,41 @@ function reloadMConfig(json){
 		let idCounter = 0;
 		for(let m of json.measurements){
 			if(typeof(m) == "object"){
-				let type = m.type;
-				if(typeof(type) != "string")
-					throw new TypeError("'type' in a 'measurements' object must be a string");
-				let name = m.name;
-				if(name && typeof(name) != "string")
-					throw new TypeError("'name' must be a string or empty");
-				if(!measurers[type]){
-					logger.debug("Loading measurer '" + type + "'");
-					let measurer = require("./measurements/" + type);
-					if(typeof(measurer.test) != "function")
-						throw new Error("Invalid measurer '" + type + "': test is not a function");
-					if(typeof(measurer.init) == "function"){
-						measurer.init(logger.copy(type));
-					}
-					measurers[type] = measurer;
+				if(!m){
+					idCounter++;
+					continue;
 				}
-				let interval;
-				if(typeof(m.interval) == "number")
-					interval = m.interval * 1000;
-				else
-					interval = 60000;
-				let args = m.args || {};
-				let saveHistory = m.saveHistory !== undefined ? !!m.saveHistory : true;
-				let id = idCounter++;
-				measurements0[id] = {id, name: name || args.target, type, interval, args, hideTarget: !!m.hideTarget, saveHistory, nonCritical: !!m.nonCritical};
+				let mobj;
+				if(m){
+					let type = m.type;
+					if(typeof(type) != "string")
+						throw new TypeError("'type' in a 'measurements' object must be a string");
+					let name = m.name;
+					if(name && typeof(name) != "string")
+						throw new TypeError("'name' must be a string or empty");
+					if(!measurers[type]){
+						logger.debug("Loading measurer '" + type + "'");
+						let measurer = require("./measurements/" + type);
+						if(typeof(measurer.test) != "function")
+							throw new Error("Invalid measurer '" + type + "': test is not a function");
+						if(typeof(measurer.init) == "function"){
+							measurer.init(logger.copy(type));
+						}
+						measurers[type] = measurer;
+					}
+					let interval;
+					if(typeof(m.interval) == "number")
+						interval = m.interval * 1000;
+					else
+						interval = 60000;
+					let args = m.args || {};
+					let saveHistory = m.saveHistory !== undefined ? !!m.saveHistory : true;
+					mobj = {name: name || args.target, type, interval, args, hideTarget: !!m.hideTarget, saveHistory, nonCritical: !!m.nonCritical, disabled: !!m.disabled};
+				}else{
+					mobj = {disabled: true};
+				}
+				mobj.id = idCounter++;
+				measurements0[mobj.id] = mobj;
 			}else
 				throw new TypeError("Values in 'measurements' must be objects");
 		}
@@ -362,6 +372,8 @@ function shutdown(status){
 
 function startMeasurements(){
 	for(let m of measurements){
+		if(m.disabled)
+			continue;
 		m.intervalI = setInterval(doMeasurement, m.interval, m.id);
 	}
 }
@@ -827,7 +839,7 @@ function getMeasurementStatusLocal(id){
 		throw new Error("Invalid id: " + id);
 	let lms = localMeasurementStatus[id];
 	if(!lms){
-		lms = {id, success: false, lastSuccess: -1, responseTime: -1, history: loadMeasurementHistory(id, measurements[id].interval)};
+		lms = {id, success: false, lastSuccess: -1, responseTime: -1, history: loadMeasurementHistory(id, measurements[id].interval || 0)};
 		lms.lastSuccess = lms.history.lastUp;
 		localMeasurementStatus[id] = lms;
 	}
@@ -990,7 +1002,7 @@ const http_api = {
 			historyEnd = HMgr.htime();
 		let lms = getMeasurementStatusLocal(id);
 		let m = measurements[id];
-		writeJSONResponse(res, 200, {name: m.name, type: m.type, target: m.hideTarget ? null : m.args.target, nonCritical: m.nonCritical,
+		writeJSONResponse(res, 200, {name: m.name, type: m.type, target: m.hideTarget ? null : m.args.target, nonCritical: m.nonCritical, disabled: m.disabled,
 				success: lms.success, lastSuccess: lms.lastSuccess, responseTime: lms.responseTime,
 				history: m.saveHistory ? historyConvertToUTime(lms.history.filter(historyStart, historyEnd).data) : []});
 	},
