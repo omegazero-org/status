@@ -30,10 +30,10 @@ async function test(args){
 		if(net.isIP(target) == 0){
 			let res;
 			try{
-				res = await dns.promises.resolve4(target);
+				res = await dns.promises.resolve6(target);
 			}catch(e){
 				if(e.toString().includes("ENODATA"))
-					res = await dns.promises.resolve6(target);
+					res = await dns.promises.resolve4(target);
 				else
 					throw e;
 			}
