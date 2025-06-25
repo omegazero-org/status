@@ -27,7 +27,7 @@ const logger = omzlib.logger;
 const HMgr = require("./hmgr.js");
 
 
-const VERSION = "2.4.1";
+const VERSION = "2.4.2";
 const BRAND = "omz-status/" + VERSION;
 
 const visibilityThreshold = 0.5;
@@ -70,6 +70,7 @@ let webserver;
 const webroot = path.resolve(srcRoot + "www");
 
 let ownVisibility = 0; // our absolute visibility
+let visibleNodeCount = 0;
 
 let statusMessages = [];
 let statusMessagesUpdated = 0;
@@ -523,7 +524,7 @@ async function doMeasurement(id){
 	try{
 		if(id < 0 || id >= measurements.length)
 			throw new Error("Invalid measurement id " + id);
-		if(ownVisibility < visibilityThreshold){
+		if(!(visibleNodeCount >= 3 || ownVisibility >= visibilityThreshold)){
 			logger.debug("Skipping measurement " + id + " because visibility is too low");
 			return;
 		}
@@ -563,6 +564,7 @@ async function fixHistory(start, end, mh, id){
 		if(n.thisNode || (!mh && n.id == id))
 			continue;
 		try{
+			await sleep(Math.random() * 1000);
 			await fixHistoryWithNode(mh, id, n, start, end);
 		}catch(e){
 			logger.warn("Could not get history data from node '" + n.name + "' for '" + nid + "': " + e);
@@ -634,7 +636,7 @@ function pollAllNodes(){
 	let end = Promise.all(ps);
 	end.then(() => {
 		let htime = HMgr.htime();
-		let visibleNodeCount = 0;
+		visibleNodeCount = 0;
 		for(let ns of publicNodesStatus){
 			if(ns.visible)
 				visibleNodeCount++;
@@ -666,6 +668,7 @@ function pollAllNodes(){
 async function pollNode(node, timeout){
 	let nodeStatus = getNodeStatusPublic(node.id);
 	try{
+		await sleep(config.pollInterval * 250 * Math.random());
 		logger.debug("Polling '" + node.name + "'");
 		let ns = await getNodeStatus(node, timeout);
 		const time = Date.now();
@@ -1090,6 +1093,10 @@ function writeResponse(res, status, data, eheaders){
 	res.end(data);
 }
 
+
+function sleep(ms){
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function getSrcRoot(){
 	let srcRootParts = process.argv[1].split(path.sep);
